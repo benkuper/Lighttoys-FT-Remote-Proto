@@ -1,2 +1,2 @@
-# Lighttoys-FT-Remote-Docs
-Documentation for the Lighttoys FT new remote prototype
+# Lighttoys FT Remote proto
+R&D for new lighttoys remote prototype
