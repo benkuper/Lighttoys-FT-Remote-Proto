@@ -24,7 +24,7 @@ class FTRemoteManager  :
 
     void init()
     {
-      ftSerial.begin(115200, SERIAL_8N1, 16, 17);
+      ftSerial.begin(115200, SERIAL_8N1, 36,4); // ADAFRUIT FEATHER 32 : 16, 17);
 
       memset(buffer, 0, 256);
     }

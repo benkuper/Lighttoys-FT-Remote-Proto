@@ -9,20 +9,17 @@ Config conf;
 #define USE_BLE 1
 #endif
 
+#define USE_ETHERNET 1
+
 #define USE_WIFI 1
-#if USE_WIFI
+
+#if USE_WIFI || USE_ETHERNET
 #define USE_OSC 1
 #define USE_UDP 1
 #endif
 
 #define USE_FT 1
 #define USE_SERVER 1
-
-#define USE_BUTTONS 0
-#define USE_LEDS 0
-#define USE_FILES 0
-#define USE_PLAYER 0
-
 // ******************************************   INCLUDES
 
 #if USE_SERIAL
@@ -39,6 +36,12 @@ BLEManager bleManager;
 #include "FTRemoteManager.h"
 FTRemoteManager ftManager;
 #endif
+
+
+#if USE_ETHERNET
+#include "EthernetManager.h"
+EthernetManager ethernetManager;
+#endif //WIFI
 
 #if USE_WIFI
 #include "WifiManager.h"
@@ -60,28 +63,39 @@ UDPManager udpManager;
 RWebServer webServer;
 #endif // WEBSERVER
 
-#if USE_BUTTONS
-#include "ButtonManager.h"
-ButtonManager btManager;
-#endif
-
-#if USE_LEDS
-#include "LedManager.h"
-LedManager ledManager;
-#endif
-
-#if USE_FILES
-#include "FileManager.h"
-FileManager fileManager;
-#endif
-
-#if USE_PLAYER
-#include "Player.h"
-Player player;
-#endif
 
 // ******************************************   CALLBACK
 
+// *********************  ETHERNET
+
+#if USE_ETHERNET
+void ethernetConnectionUpdate()
+{
+  DBG("Ethernet connection update " + String(ethernetManager.isConnected));
+
+  if (ethernetManager.isConnected)
+  {
+    digitalWrite(13, LOW);
+    
+#if USE_OSC
+    DBG("Setup OSC now");
+    oscManager.init();
+#endif //OSC
+
+#if USE_UDP
+    DBG("Setup UDP now");
+    udpManager.init();
+#endif
+
+#if USE_SERVER
+   webServer.init();
+#endif
+  }else
+  {
+    wifiManager.init(); //force trying wifi again
+  }
+}
+#endif //ETHERNET
 
 // *********************  WIFI
 
@@ -161,7 +175,6 @@ void commandCallback(String providerId, CommandProvider::CommandData data)
 
 void setup()
 {
-  //Need to activate mosfet
   pinMode(13, OUTPUT);
   digitalWrite(13, HIGH);
 
@@ -187,42 +200,33 @@ void setup()
   ledManager.init();
 #endif
 
-#if USE_WIFI
-  wifiManager.init();
-  wifiManager.setCallbackConnectionUpdate(wifiConnectionUpdate);
-
-#if USE_LEDS
-  updateConnectionLeds();
+#if USE_ETHERNET
+  ethernetManager.init();
+  ethernetManager.setCallbackConnectionUpdate(ethernetConnectionUpdate);
 #endif
+
+
+#if USE_WIFI
+
+#if !USE_ETHERNET
+    wifiManager.init(); // only init wifi at start if ethernet not here, otherwise wait for ethernet failed.
+#endif
+  
+  wifiManager.setCallbackConnectionUpdate(wifiConnectionUpdate);
 #endif //WIFI
 
 #if USE_OSC
-  //wait for wifi event to init
   oscManager.setCommandCallback(&commandCallback);
 #endif //OSC
 
 #if USE_UDP
-  //wait for wifi event to init
+  //wait for wifi or ethernet event to init
   udpManager.setCommandCallback(&commandCallback);
 #endif //UDP4
 
 #if USE_SERVER
- //wait for wifi event to init
+ //wait for wifi or ethernet event to init
  webServer.setCommandCallback(&commandCallback);
-#endif
-
-#if USE_BUTTONS
-  btManager.init();
-  btManager.setEventCallbacks(handlePress, handleShortPress, handleLongPress, handleVeryLongPress, handleMultiPress);
-#endif
-
-
-#if USE_FILES
-  fileManager.init();
-#endif
-
-#if USE_PLAYER
-  player.init();
 #endif
 
   DBG("Bridge is initialized");
@@ -231,15 +235,15 @@ void setup()
 
 void loop()
 {
-#if USE_BUTTONS
-  btManager.update();
-#endif
-
 #if USE_SERIAL
   serialManager.update();
 #if USE_BLE
   bleManager.update();
 #endif
+#endif
+
+#if USE_ETHERNET
+  ethernetManager.update();
 #endif
 
 #if USE_WIFI
@@ -260,10 +264,6 @@ void loop()
 
 #if USE_FT
   ftManager.update();
-#endif
-
-#if USE_PLAYER
-  player.update();
 #endif
 
 }

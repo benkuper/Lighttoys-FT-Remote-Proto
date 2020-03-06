@@ -6,6 +6,9 @@
 #include <WiFiClient.h>
 #include <WebServer.h>
 #include <ESPmDNS.h>
+#if USE_ETHERNET
+#include <ETH.h>
+#endif
 
 class RWebServer :
   public CommandProvider
@@ -84,6 +87,9 @@ class RWebServer :
     String wrapContent(String content)
     {
       String ip = (WiFi.getMode() == WIFI_STA ? WiFi.localIP() : WiFi.softAPIP()).toString();
+#if USE_ETHERNET
+    String ethIP  = ETH.localIP().toString();
+#endif
       String result = "<html><head><title>FT Remote Configuration</title>";
       result += "<style>.inline{ display:inline-block; width:100px; }</style>";
       result += "</head>";
@@ -91,7 +97,10 @@ class RWebServer :
       result += "<img src='"+String(getLogoData())+"' style='margin:30px 0 0' /><br>";
       result += "<div id='form_container' style='background-color: #333; color: #eee; border: solid 1px #444;width: 60%;left: 20%;position: absolute;margin-top: 20px;text-align: center;padding: 10px 0 20px; line-height:2em'>";
       result += "<h1><a>FT Remote Configuration</a></h1>";
-      result += "<h2>Current IP : " + ip + "</h2>";
+      if(ip != "0.0.0.0") result += "<h2>Current WiFi IP : " + ip + "</h2>";
+#if USE_ETHERNET
+      if(ethIP != "0.0.0.0") result += "<h2>Current Ethernet IP : " + ethIP + "</h2>";
+#endif
       result +=  content + "</body></html>";
 
       return result;

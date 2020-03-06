@@ -12,136 +12,136 @@
 
 class WifiManager
 {
-public:
-  WifiManager(){  
+  public:
+    WifiManager() {
       setCallbackConnectionUpdate(&WifiManager::connectionUpdateDefaultCallback);
-  }
-  
-  ~WifiManager(){}
-
-  bool isLocal = false;
-  bool isConnected = false;
-  bool isConnecting = false;
-  
-  long timeAtStartConnect;
-  long timeAtLastConnect;
-
-  bool isActivated;
-  
-  void init()
-  {
-    isActivated = Config::instance->getWifiMode();
-
-    if(isConnected)
-    {
-      DBG("Disconnecting first...");
-      WiFi.disconnect();
-      delay(100);
-    }
-    
-    if(!isActivated)
-    {
-      DBG("Wifi is not activated, not initializing");
-      return;
     }
 
-    String ssid = Config::instance->getWifiSSID();
-    String pass = Config::instance->getWifiPassword();
-    String ip = Config::instance->getStaticIP();
-    String gateway = Config::instance->getGateway();
-    String subnet = Config::instance->getSubnetMask();
-    
-    DBG("Connecting to Wifi "+ssid+" with password "+pass+"...");
+    ~WifiManager() {}
 
-    WiFi.mode(WIFI_STA);
-   
-    if(ip != "" && gateway != "" && subnet != "")
+    bool isLocal = false;
+    bool isConnected = false;
+    bool isConnecting = false;
+
+    long timeAtStartConnect;
+    long timeAtLastConnect;
+
+    bool isActivated;
+
+    void init()
     {
-      IPAddress addr;
-      IPAddress gatAddr;
-      IPAddress subnetAddr;
-      if(addr.fromString(ip) && gatAddr.fromString(gateway) && subnetAddr.fromString(subnet))
+      isActivated = Config::instance->getWifiMode();
+
+      if (isConnected)
       {
-        WiFi.config(addr, gatAddr, subnetAddr);
-      }else
+        DBG("Wifi init : disconnecting first...");
+        WiFi.disconnect();
+        delay(100);
+      }
+
+      if (!isActivated)
       {
-        DBG("Error setting static IP "+ip+", gateway "+gateway+", subnet "+subnet);
+        DBG("Wifi is not activated, not initializing");
+        return;
       }
-    }
-    
-    WiFi.begin(ssid.c_str(), pass.c_str());
-    WiFi.setSleep(false);
 
-    
-    timeAtStartConnect = millis();
-    timeAtLastConnect = millis();
-    
-    isLocal = false;
-    isConnecting = true;
-    setConnected(false);
-    
-    digitalWrite(13, HIGH);
-  }
+      String ssid = Config::instance->getWifiSSID();
+      String pass = Config::instance->getWifiPassword();
+      String ip = Config::instance->getStaticIP();
+      String gateway = Config::instance->getGateway();
+      String subnet = Config::instance->getSubnetMask();
 
-  void update()
-  {
-    if(!isActivated) return;
-    if(isLocal || isConnected) return;
+      DBG("Connecting to Wifi " + ssid + " with password " + pass + "...");
 
-    if(millis() > timeAtLastConnect + CONNECT_TRYTIME)
-    {      
-      if(WiFi.status() == WL_CONNECTED)
-      {  
-         digitalWrite(13, LOW);
+      WiFi.mode(WIFI_STA);
 
-         DBG("WiFi Connected, local IP : "+WiFi.localIP().toString());
-
-        isLocal = true;
-        setConnected(true);
-    
-         return;
+      if (ip != "" && gateway != "" && subnet != "")
+      {
+        IPAddress addr;
+        IPAddress gatAddr;
+        IPAddress subnetAddr;
+        if (addr.fromString(ip) && gatAddr.fromString(gateway) && subnetAddr.fromString(subnet))
+        {
+          WiFi.config(addr, gatAddr, subnetAddr);
+        } else
+        {
+          DBG("Error setting static IP " + ip + ", gateway " + gateway + ", subnet " + subnet);
+        }
       }
+
+      WiFi.begin(ssid.c_str(), pass.c_str());
+      WiFi.setSleep(false);
+      WiFi.setHostname("ftremote");
+
+      timeAtStartConnect = millis();
       timeAtLastConnect = millis();
-    }
-        
-    if(millis() > timeAtStartConnect + CONNECT_TIMEOUT)
-    {
-      DBG("Could not connect to "+Config::instance->getWifiSSID());
+
+      isLocal = false;
+      isConnecting = true;
       setConnected(false);
-      for(int i=0;i<5;i++)
-      {
-        digitalWrite(13, HIGH);
-        delay(50);
-        digitalWrite(13, LOW);
-        delay(50);
-      }
-      
-      setupLocal();
+
+      digitalWrite(13, HIGH);
     }
-  }
 
-  void setupLocal()
-  {
-    String softAPName = "Lighttoys RemoteRemote "+Config::instance->getDeviceName();
-    String softAPPass = "pyroterra";
-    WiFi.softAP(softAPName.c_str(), softAPPass.c_str());
-    Serial.println("Local IP : "+WiFi.softAPIP().toString());
+    void update()
+    {
+      if (!isActivated) return;
+      if (isLocal || isConnected) return;
 
-    isLocal = true;
-    isConnecting = false;
-    setConnected(true);
-    
-    DBG("AP WiFi is init with name "+softAPName+" , pass : "+softAPPass);
-  }
+      if (millis() > timeAtLastConnect + CONNECT_TRYTIME)
+      {
+        if (WiFi.status() == WL_CONNECTED)
+        {
+          digitalWrite(13, LOW);
 
-  void setConnected(bool value)
-  {
-    isConnected = value;
-    onConnectionUpdate();
-  }
+          DBG("WiFi Connected, local IP : " + WiFi.localIP().toString());
+
+          isLocal = true;
+          setConnected(true);
+
+          return;
+        }
+        timeAtLastConnect = millis();
+      }
+
+      if (millis() > timeAtStartConnect + CONNECT_TIMEOUT)
+      {
+        DBG("Could not connect to " + Config::instance->getWifiSSID());
+        setConnected(false);
+        for (int i = 0; i < 5; i++)
+        {
+          digitalWrite(13, HIGH);
+          delay(50);
+          digitalWrite(13, LOW);
+          delay(50);
+        }
+
+        setupLocal();
+      }
+    }
+
+    void setupLocal()
+    {
+      String softAPName = "Lighttoys RemoteRemote " + Config::instance->getDeviceName();
+      String softAPPass = "pyroterra";
+      WiFi.softAP(softAPName.c_str(), softAPPass.c_str());
+      Serial.println("Local IP : " + WiFi.softAPIP().toString());
+
+      isLocal = true;
+      isConnecting = false;
+      setConnected(true);
+
+      DBG("AP WiFi is init with name " + softAPName + " , pass : " + softAPPass);
+    }
+
+    void setConnected(bool value)
+    {
+      isConnected = value;
+      onConnectionUpdate();
+    }
 
 
-  typedef void(*onConnectionUpdateEvent)();
+    typedef void(*onConnectionUpdateEvent)();
     void (*onConnectionUpdate) ();
 
     void setCallbackConnectionUpdate (onConnectionUpdateEvent func) {
